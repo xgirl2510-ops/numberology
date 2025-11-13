@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Bash(chmod:*)",
+      "Bash(./run.sh)",
+      "Bash(xattr:*)",
+      "Bash(/usr/bin/python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "sandbox": {
+    "enabled": false
+  }
+}

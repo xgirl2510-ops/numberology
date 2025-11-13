@@ -1,0 +1,6 @@
+# Core dependencies
+# No required dependencies - library works standalone
+
+# Optional dependencies for translation support
+# Uncomment if you need Google Translate integration:
+# googletrans==4.0.0rc1

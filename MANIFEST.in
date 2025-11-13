@@ -1,0 +1,26 @@
+# Include the README and LICENSE
+include README.md
+include LICENSE
+
+# Include requirements files
+include requirements.txt
+include requirements-dev.txt
+
+# Include documentation files
+include CHANGELOG.md
+recursive-include docs *.md *.rst
+
+# Include all markdown documentation
+include *.md
+recursive-include numerology *.md
+
+# Include type information
+include numerology/py.typed
+
+# Exclude unnecessary files
+exclude .DS_Store
+exclude .gitignore
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude tests *
+recursive-exclude .github *
