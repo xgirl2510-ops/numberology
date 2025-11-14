@@ -2042,7 +2042,9 @@ class Numerology:
     def get_extended_report(self) -> Dict:
         """
         Tạo báo cáo mở rộng với metadata, age, importance, ai_context
-        Version 2.0: Bổ sung Master Numbers Analysis, Conflicts/Harmonies, Actionable Insights
+        Version 2.1: Improved key names for better AI comprehension
+        - Renamed 'data' to 'all_pinnacles' and 'all_challenges'
+        - Renamed 'details' to 'master_numbers_found'
 
         Returns:
             Dict với structure đầy đủ để AI dễ luận giải
@@ -2173,7 +2175,7 @@ class Numerology:
             'metadata': {
                 'report_type': 'Numerology Complete Analysis',
                 'generated_at': datetime.now().isoformat(),
-                'version': '2.0',  # Updated version
+                'version': '2.1',  # Updated version - improved key names
                 'language': 'Vietnamese' if self.language == 'vi' else 'English'
             },
 
@@ -2377,7 +2379,7 @@ class Numerology:
                 'name': get_vietnamese_name('pinnacles'),
                 'importance': get_importance('pinnacles'),
                 'meaning': get_meaning('pinnacles'),
-                'data': pinnacle_list,
+                'all_pinnacles': pinnacle_list,  # Renamed from 'data' for clarity
                 'current_pinnacle': current_pinnacle,
                 'ai_context': f"Hiện tại đang ở giai đoạn Pinnacle {current_pinnacle['stage']} (số {current_pinnacle['number']})." if current_pinnacle else "Chưa xác định được giai đoạn hiện tại."
             },
@@ -2385,7 +2387,7 @@ class Numerology:
                 'name': get_vietnamese_name('challenges'),
                 'importance': get_importance('challenges'),
                 'meaning': get_meaning('challenges'),
-                'data': challenge_list,
+                'all_challenges': challenge_list,  # Renamed from 'data' for clarity
                 'current_challenge': current_challenge,
                 'ai_context': f"Hiện tại đang đối mặt với Challenge {current_challenge['stage']} (số {current_challenge['number']})." if current_challenge else "Chưa xác định được thử thách hiện tại."
             }
@@ -2402,7 +2404,7 @@ class Numerology:
         master_numbers_analysis = {
             'has_master_numbers': len(master_numbers_found) > 0,
             'count': sum(len(locations) for locations in master_numbers_found.values()),
-            'details': []
+            'master_numbers_found': []  # Renamed from 'details' for clarity
         }
 
         master_number_names = {
@@ -2412,7 +2414,7 @@ class Numerology:
         }
 
         for number, locations in master_numbers_found.items():
-            master_numbers_analysis['details'].append({
+            master_numbers_analysis['master_numbers_found'].append({
                 'number': number,
                 'name': master_number_names.get(number, f'Số Chủ {number}'),
                 'locations': locations,
@@ -2423,7 +2425,7 @@ class Numerology:
         # Add AI insight for master numbers
         if master_numbers_analysis['has_master_numbers']:
             insights = []
-            for detail in master_numbers_analysis['details']:
+            for detail in master_numbers_analysis['master_numbers_found']:
                 num = detail['number']
                 locs = detail['locations']
                 if 'life_path' in locs:
