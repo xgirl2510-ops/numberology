@@ -2042,10 +2042,10 @@ class Numerology:
     def get_extended_report(self) -> Dict:
         """
         Tạo báo cáo mở rộng với metadata, age, importance, ai_context
-        Giống format của example_full_report.json để AI dễ luận giải
+        Version 2.0: Bổ sung Master Numbers Analysis, Conflicts/Harmonies, Actionable Insights
 
         Returns:
-            Dict với structure đầy đủ như example_full_report.json
+            Dict với structure đầy đủ để AI dễ luận giải
         """
         from datetime import datetime
 
@@ -2059,6 +2059,36 @@ class Numerology:
 
         # Format birth_date as string
         birth_date_str = birth.strftime('%d/%m/%Y')
+
+        # Helper function to check if number is Master Number
+        def is_master_number(num):
+            return num in [11, 22, 33]
+
+        # Helper function to get simple interpretation for a number
+        def get_simple_interpretation(number, context='general'):
+            """Get simple interpretation for pinnacles/challenges/secondary numbers"""
+            master_note = " (Master Number - Tiềm năng cao đặc biệt)" if is_master_number(number) else ""
+
+            basic_meanings = {
+                0: "Không thử thách đặc biệt, học tất cả",
+                1: "Độc lập, lãnh đạo, tự chủ",
+                2: "Hợp tác, kiên nhẫn, quan hệ",
+                3: "Sáng tạo, giao tiếp, vui vẻ",
+                4: "Kỷ luật, tổ chức, nền tảng",
+                5: "Tự do, thay đổi, phiêu lưu",
+                6: "Trách nhiệm, gia đình, chăm sóc",
+                7: "Trí tuệ, phân tích, tâm linh",
+                8: "Thành công, quyền lực, vật chất",
+                9: "Hoàn thiện, từ bi, phục vụ",
+                11: "Soi sáng, truyền cảm hứng, tâm linh cao",
+                22: "Xây dựng vĩ đại, tầm nhìn lớn",
+                33: "Giảng dạy, chữa lành, phục vụ cao nhất"
+            }
+
+            return {
+                'theme': basic_meanings.get(number, 'Cần khám phá') + master_note,
+                'is_master_number': is_master_number(number)
+            }
 
         # Helper function to get importance stars
         def get_importance(category):
@@ -2143,7 +2173,7 @@ class Numerology:
             'metadata': {
                 'report_type': 'Numerology Complete Analysis',
                 'generated_at': datetime.now().isoformat(),
-                'version': '1.0',
+                'version': '2.0',  # Updated version
                 'language': 'Vietnamese' if self.language == 'vi' else 'English'
             },
 
@@ -2160,29 +2190,43 @@ class Numerology:
             'life_cycles': {}
         }
 
+        # Collect all numbers for master number analysis
+        all_numbers = {}
+
         # Process core numbers
         for key in ['life_path', 'expression', 'soul_urge', 'personality', 'birthday']:
             num_data = standard_data['core_numbers'][key]
+            num = num_data['number']
+            all_numbers[key] = num
+
             report['core_numbers'][key] = {
-                'number': num_data['number'],
+                'number': num,
                 'name': get_vietnamese_name(key),
                 'importance': get_importance(key),
                 'meaning': get_meaning(key),
                 'interpretation': num_data.get('interpretation', {}),
-                'ai_context': get_ai_context(key, num_data['number'])
+                'ai_context': get_ai_context(key, num),
+                'is_master_number': is_master_number(num)  # NEW
             }
 
-        # Process secondary numbers
+        # Process secondary numbers with basic interpretations
         for key in ['maturity', 'balance', 'hidden_passion', 'subconscious_self']:
             if key in standard_data['secondary_numbers']:
                 num_value = standard_data['secondary_numbers'][key]
+                all_numbers[key] = num_value
+
+                simple_interp = get_simple_interpretation(num_value, key)
+
                 report['secondary_numbers'][key] = {
                     'number': num_value,
                     'name': get_vietnamese_name(key),
                     'importance': get_importance(key),
                     'meaning': get_meaning(key),
-                    'interpretation': {},  # Can add interpretations if available
-                    'ai_context': get_ai_context(key, num_value)
+                    'interpretation': {  # NEW: Add basic interpretation
+                        'theme': simple_interp['theme']
+                    },
+                    'ai_context': get_ai_context(key, num_value),
+                    'is_master_number': simple_interp['is_master_number']  # NEW
                 }
 
         # Process name analysis
@@ -2215,6 +2259,8 @@ class Numerology:
             },
             'karmic_lessons': {
                 'missing_numbers': karmic_lessons,
+                'count': len(karmic_lessons),  # NEW
+                'severity': 'low' if len(karmic_lessons) < 2 else ('moderate' if len(karmic_lessons) <= 3 else 'high'),  # NEW
                 'name': get_vietnamese_name('karmic_lessons'),
                 'importance': get_importance('karmic_lessons'),
                 'meaning': get_meaning('karmic_lessons'),
@@ -2255,20 +2301,33 @@ class Numerology:
 
             is_current = (age >= start_age and (end_age is None or age <= end_age))
 
+            # Calculate years remaining
+            years_remaining = None
+            if is_current and end_age is not None:
+                years_remaining = end_age - age
+
+            # Get simple interpretation
+            simple_interp = get_simple_interpretation(pinnacle['number'], 'pinnacle')
+
             pinnacle_data = {
                 'stage': str(stage),
                 'number': pinnacle['number'],
                 'age_range': age_range,
                 'start_age': start_age,
                 'end_age': end_age,
-                'interpretation': {},  # Can add interpretations
-                'is_current': is_current
+                'interpretation': {  # NEW: Add interpretation
+                    'theme': simple_interp['theme']
+                },
+                'is_current': is_current,
+                'is_master_number': simple_interp['is_master_number'],  # NEW
+                'years_remaining': years_remaining if is_current else None  # NEW
             }
 
             pinnacle_list.append(pinnacle_data)
 
             if is_current:
                 current_pinnacle = pinnacle_data.copy()
+                all_numbers['current_pinnacle'] = pinnacle['number']
 
         challenge_list = []
         for stage, (key, challenge) in enumerate(challenges.items(), 1):
@@ -2284,20 +2343,33 @@ class Numerology:
 
             is_current = (age >= start_age and (end_age is None or age <= end_age))
 
+            # Calculate years remaining
+            years_remaining = None
+            if is_current and end_age is not None:
+                years_remaining = end_age - age
+
+            # Get simple interpretation
+            simple_interp = get_simple_interpretation(challenge['number'], 'challenge')
+
             challenge_data = {
                 'stage': str(stage),
                 'number': challenge['number'],
                 'age_range': age_range,
                 'start_age': start_age,
                 'end_age': end_age,
-                'interpretation': {},  # Can add interpretations
-                'is_current': is_current
+                'interpretation': {  # NEW: Add interpretation
+                    'theme': simple_interp['theme']
+                },
+                'is_current': is_current,
+                'is_master_number': simple_interp['is_master_number'],  # NEW
+                'years_remaining': years_remaining if is_current else None  # NEW
             }
 
             challenge_list.append(challenge_data)
 
             if is_current:
                 current_challenge = challenge_data.copy()
+                all_numbers['current_challenge'] = challenge['number']
 
         report['life_cycles'] = {
             'current_age': age,
@@ -2319,10 +2391,175 @@ class Numerology:
             }
         }
 
-        # Add summary section
+        # PHASE 2: MASTER NUMBERS ANALYSIS
+        master_numbers_found = {}
+        for location, number in all_numbers.items():
+            if is_master_number(number):
+                if number not in master_numbers_found:
+                    master_numbers_found[number] = []
+                master_numbers_found[number].append(location)
+
+        master_numbers_analysis = {
+            'has_master_numbers': len(master_numbers_found) > 0,
+            'count': sum(len(locations) for locations in master_numbers_found.values()),
+            'details': []
+        }
+
+        master_number_names = {
+            11: 'Số Chủ 11 - The Illuminator',
+            22: 'Số Chủ 22 - The Master Builder',
+            33: 'Số Chủ 33 - The Master Teacher'
+        }
+
+        for number, locations in master_numbers_found.items():
+            master_numbers_analysis['details'].append({
+                'number': number,
+                'name': master_number_names.get(number, f'Số Chủ {number}'),
+                'locations': locations,
+                'count': len(locations),
+                'significance': f"Số {number} xuất hiện ở {len(locations)} vị trí, cho thấy tiềm năng tâm linh và sứ mệnh cao"
+            })
+
+        # Add AI insight for master numbers
+        if master_numbers_analysis['has_master_numbers']:
+            insights = []
+            for detail in master_numbers_analysis['details']:
+                num = detail['number']
+                locs = detail['locations']
+                if 'life_path' in locs:
+                    insights.append(f"Life Path {num}: Sứ mệnh cuộc đời đặc biệt cao")
+                if 'soul_urge' in locs:
+                    insights.append(f"Soul Urge {num}: Khao khát tâm linh mãnh liệt")
+                if 'current_pinnacle' in locs:
+                    insights.append(f"Pinnacle hiện tại là {num}: Giai đoạn quan trọng đặc biệt")
+
+            master_numbers_analysis['ai_insight'] = "; ".join(insights) if insights else "Master Numbers cho thấy tiềm năng cao đặc biệt"
+
+        report['master_numbers_analysis'] = master_numbers_analysis
+
+        # PHASE 3: NUMBER INTERACTIONS (Conflicts & Harmonies)
+        conflicts = []
+        harmonies = []
+
+        lp = all_numbers.get('life_path', 0)
+        su = all_numbers.get('soul_urge', 0)
+        exp = all_numbers.get('expression', 0)
+        pers = all_numbers.get('personality', 0)
+
+        # Detect conflicts
+        # LP vs SU conflict patterns
+        lp_material = lp in [4, 8]  # Material-focused
+        su_spiritual = su in [7, 9, 11, 33]  # Spiritual-focused
+
+        if lp_material and su_spiritual:
+            conflicts.append({
+                'type': 'life_path_vs_soul_urge',
+                'numbers': [lp, su],
+                'description': f'Life Path {lp} hướng về thành công vật chất, nhưng Soul Urge {su} khao khát tâm linh',
+                'resolution': f'Sử dụng thành công vật chất (LP {lp}) để phục vụ sứ mệnh tâm linh cao hơn (SU {su})',
+                'ai_advice': 'Khuyên người này cân bằng giữa mục tiêu vật chất và phát triển tâm linh'
+            })
+
+        # SU vs Personality conflict
+        su_introverted = su in [2, 4, 7]
+        pers_extroverted = pers in [1, 3, 5]
+
+        if su_introverted and pers_extroverted:
+            conflicts.append({
+                'type': 'inner_vs_outer',
+                'numbers': [su, pers],
+                'description': f'Soul Urge {su} khao khát sự tĩnh lặng, nhưng Personality {pers} tỏa ra năng lượng hướng ngoại',
+                'resolution': 'Tìm thời gian cho bản thân dù hình ảnh bên ngoài rất năng động',
+                'ai_advice': 'Người này cần cân bằng giữa nhu cầu nội tâm và hình ảnh bên ngoài'
+            })
+
+        # Detect harmonies
+        # Expression supports Life Path
+        if (lp in [1, 8] and exp in [1, 3, 5]) or (lp in [2, 6, 9] and exp in [2, 6, 9]):
+            harmonies.append({
+                'type': 'expression_supports_life_path',
+                'numbers': [exp, lp],
+                'description': f'Expression {exp} hỗ trợ Life Path {lp} rất tốt',
+                'benefit': 'Tài năng tự nhiên phù hợp với mục đích cuộc đời, dễ thành công'
+            })
+
+        # Soul Urge matches Life Path
+        if abs(lp - su) <= 1 or (is_master_number(lp) and is_master_number(su)):
+            harmonies.append({
+                'type': 'aligned_purpose',
+                'numbers': [lp, su],
+                'description': f'Life Path {lp} và Soul Urge {su} hài hòa',
+                'benefit': 'Mục đích cuộc đời phù hợp với mong muốn nội tâm, ít xung đột nội tại'
+            })
+
+        report['number_interactions'] = {
+            'conflicts': conflicts,
+            'harmonies': harmonies,
+            'balance_score': len(harmonies) - len(conflicts),  # Positive = more harmonies
+            'ai_insight': f"Tổng thể {'hài hòa' if len(harmonies) >= len(conflicts) else 'cần cân bằng'}: {len(harmonies)} điểm hài hòa, {len(conflicts)} mâu thuẫn cần giải quyết"
+        }
+
+        # Build summary section with actionable insights
         lp_interp = report['core_numbers']['life_path']['interpretation']
         exp_interp = report['core_numbers']['expression']['interpretation']
         su_interp = report['core_numbers']['soul_urge']['interpretation']
+
+        # PHASE 3: ACTIONABLE INSIGHTS
+        current_focus = []
+        warning_signs = []
+
+        # Current Pinnacle insights
+        if current_pinnacle:
+            pinn_num = current_pinnacle['number']
+            years_left = current_pinnacle.get('years_remaining')
+            if years_left is not None:
+                urgency = "HIGH" if years_left <= 3 else ("MEDIUM" if years_left <= 6 else "LOW")
+                current_focus.append(f"Tận dụng Pinnacle {current_pinnacle['stage']} (số {pinn_num}) - còn {years_left} năm")
+                if urgency == "HIGH":
+                    warning_signs.append(f"Đang ở tuổi {age} - chỉ còn {years_left} năm trong Pinnacle {pinn_num} quan trọng")
+
+        # Current Challenge insights
+        if current_challenge:
+            chal_num = current_challenge['number']
+            current_focus.append(f"Vượt qua Challenge {current_challenge['stage']} (số {chal_num})")
+
+        # Karmic lessons insights
+        if karmic_lessons:
+            if len(karmic_lessons) >= 3:
+                warning_signs.append(f"Có {len(karmic_lessons)} bài học nghiệp cần học - đòi hỏi nhiều nỗ lực")
+            current_focus.append(f"Học các bài học số {', '.join(map(str, karmic_lessons))}")
+
+        # Conflicts insights
+        for conflict in conflicts:
+            warning_signs.append(conflict['description'])
+
+        # Upcoming pinnacle
+        upcoming_pinnacle = None
+        for p in pinnacle_list:
+            if not p['is_current'] and p['start_age'] > age:
+                upcoming_pinnacle = p
+                break
+
+        long_term_vision = ""
+        if upcoming_pinnacle:
+            years_until = upcoming_pinnacle['start_age'] - age
+            long_term_vision = f"Sau tuổi {upcoming_pinnacle['start_age']}, vào Pinnacle {upcoming_pinnacle['stage']} (số {upcoming_pinnacle['number']}) - {upcoming_pinnacle['interpretation']['theme']}. Chuẩn bị từ bây giờ."
+
+        # Determine personality archetype
+        archetypes = {
+            (8, 11): ("The Spiritual CEO", "Thành công vật chất với sứ mệnh tâm linh"),
+            (11, 22): ("The Visionary Leader", "Lãnh đạo với tầm nhìn tâm linh cao"),
+            (6, 9): ("The Compassionate Healer", "Chăm sóc và phục vụ nhân loại"),
+            (1, 8): ("The Ambitious Pioneer", "Tiên phong và đạt thành công cao"),
+            (3, 5): ("The Creative Adventurer", "Sáng tạo và tự do khám phá"),
+            (2, 6): ("The Harmonious Peacemaker", "Hòa giải và tạo sự cân bằng")
+        }
+
+        archetype = ("The Numerology Profile", "Hành trình phát triển độc đáo")
+        for key, value in archetypes.items():
+            if (lp, su) == key or (su, lp) == key:
+                archetype = value
+                break
 
         report['summary'] = {
             'overview': f"{standard_data['personal_info']['original_name']} có Life Path Number là {report['core_numbers']['life_path']['number']} ({lp_interp.get('title', '')}), Expression Number là {report['core_numbers']['expression']['number']} ({exp_interp.get('title', '')}), và Soul Urge Number là {report['core_numbers']['soul_urge']['number']} ({su_interp.get('title', '')}).",
@@ -2341,9 +2578,23 @@ class Numerology:
                     '3. Soul Urge Number - Động lực nội tâm và mong muốn sâu xa',
                     '4. Pinnacle hiện tại - Giai đoạn và cơ hội hiện tại',
                     '5. Challenge hiện tại - Thử thách cần vượt qua ngay bây giờ',
-                    '6. Karmic Lessons - Bài học cần học trong đời'
+                    '6. Karmic Lessons - Bài học cần học trong đời',
+                    '7. Master Numbers - Tiềm năng tâm linh cao đặc biệt',
+                    '8. Number Interactions - Mâu thuẫn và hài hòa giữa các số'
                 ],
                 'interpretation_approach': 'Hãy kết hợp tất cả các chỉ số để tạo ra một bức tranh toàn diện về con người này. Chú ý đến sự tương tác giữa các chỉ số, đặc biệt là khi có mâu thuẫn giữa mong muốn nội tâm (Soul Urge) và hình ảnh bên ngoài (Personality).'
+            },
+            # NEW: Actionable Insights
+            'actionable_insights': {
+                'current_focus': current_focus if current_focus else ['Tiếp tục phát triển theo con đường của mình'],
+                'warning_signs': warning_signs if warning_signs else ['Không có cảnh báo đặc biệt'],
+                'long_term_vision': long_term_vision if long_term_vision else 'Tiếp tục hành trình phát triển cá nhân'
+            },
+            # NEW: Personality Profile
+            'personality_profile': {
+                'archetype': archetype[0],
+                'tagline': archetype[1],
+                'ideal_path': f"Phát huy {lp_interp.get('title', 'điểm mạnh')} kết hợp với {su_interp.get('title', 'khao khát nội tâm')}"
             }
         }
 
